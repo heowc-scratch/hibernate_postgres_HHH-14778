@@ -6,6 +6,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
 import org.hibernate.exception.SQLGrammarException;
+import org.hibernate.jpa.TypedParameterValue;
+import org.hibernate.type.LongType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +50,16 @@ class ApplicationTests {
                 "ERROR: column \"count\" is of type bigint but expression is of type bytea\n" +
                 "  Hint: You will need to rewrite or cast the expression.\n" +
                 "  Position: 28");
+    }
+
+    @Test
+    void solvedNativeQuery() {
+        final Long id = 1L;
+        final Query query =
+                entityManager.createNativeQuery("UPDATE message SET count = :count WHERE id = :id")
+                             .setParameter("count", new TypedParameterValue(LongType.INSTANCE, null))
+                             .setParameter("id", id);
+        query.executeUpdate();
     }
 
     @Test
