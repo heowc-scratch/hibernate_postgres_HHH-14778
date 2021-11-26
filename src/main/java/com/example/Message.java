@@ -2,14 +2,15 @@ package com.example;
 
 import lombok.*;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NamedQuery(
+        name = "fixedCount",
+        query = "UPDATE Message m SET m.count = :count WHERE m.id = :id"
+)
 public class Message {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,20 +1,17 @@
 package com.example;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+
 import org.hibernate.exception.SQLGrammarException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Transactional
 @SpringBootTest
@@ -23,11 +20,6 @@ class ApplicationTests {
 
     @Autowired
     private EntityManager entityManager;
-    @Container
-    private final GenericContainer<?> postgresql = new PostgreSQLContainer<>("postgres:14.1-alpine")
-            .withDatabaseName("public")
-            .withUsername("postgres")
-            .withPassword("postgres");
 
     @BeforeEach
     void beforeEach() {
@@ -42,12 +34,13 @@ class ApplicationTests {
     }
 
     @Test
-    void test() {
+    void nativeQuery() {
         assertThatThrownBy(() -> {
             final Long id = 1L;
-            final Query query = entityManager.createNativeQuery("UPDATE message SET count = :count WHERE id = :id")
-                                             .setParameter("count", null)
-                                             .setParameter("id", id);
+            final Query query =
+                    entityManager.createNativeQuery("UPDATE message SET count = :count WHERE id = :id")
+                                 .setParameter("count", null)
+                                 .setParameter("id", id);
             query.executeUpdate();
         })
         .hasCauseInstanceOf(SQLGrammarException.class)
@@ -55,5 +48,15 @@ class ApplicationTests {
                 "ERROR: column \"count\" is of type bigint but expression is of type bytea\n" +
                 "  Hint: You will need to rewrite or cast the expression.\n" +
                 "  Position: 28");
+    }
+
+    @Test
+    void namedQuery() {
+        final Long id = 1L;
+        // UPDATE Message m SET m.count = :count WHERE m.id = :id
+        final Query query = entityManager.createNamedQuery("fixedCount")
+                                         .setParameter("count", null)
+                                         .setParameter("id", id);
+        query.executeUpdate();
     }
 }
