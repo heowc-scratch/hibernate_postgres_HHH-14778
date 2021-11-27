@@ -1,5 +1,6 @@
 package com.example;
 
+import org.hibernate.Session;
 import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jpa.TypedParameterValue;
 import org.hibernate.type.LongType;
@@ -14,8 +15,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
-import javax.sql.DataSource;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -31,8 +30,6 @@ class ApplicationTests {
 
     @Autowired
     private EntityManager entityManager;
-    @Autowired
-    private DataSource dataSource;
 
     @Test
     void nativeQuery() {
@@ -84,16 +81,18 @@ class ApplicationTests {
 
     @Test
     void prepareStatement() throws SQLException {
+        final Session session = entityManager.unwrap(Session.class);
+        final Long id = 1L;
         assertThatThrownBy(() -> {
-            final Long id = 1L;
-            try (final Connection connection = dataSource.getConnection();
-                 final PreparedStatement ps = connection.prepareStatement("UPDATE message SET count = ? WHERE id = ?")) {
-                ps.setNull(1, Types.BINARY);
-                ps.setLong(2, id);
-                ps.executeUpdate();
-            }
+            session.doWork(connection -> {
+                try (final PreparedStatement ps = connection.prepareStatement("UPDATE message SET count = ? WHERE id = ?")) {
+                    ps.setNull(1, Types.BINARY);
+                    ps.setLong(2, id);
+                    ps.executeUpdate();
+                }
+            });
         })
-        .hasMessageContaining(
+        .hasRootCauseMessage(
                 "ERROR: column \"count\" is of type bigint but expression is of type bytea\n" +
                 "  Hint: You will need to rewrite or cast the expression.\n" +
                 "  Position: 28");
@@ -103,13 +102,15 @@ class ApplicationTests {
     @MethodSource("provideArguments")
     void solvedPrepareStatement(Consumer<PreparedStatement> consumer)
             throws SQLException {
+        final Session session = entityManager.unwrap(Session.class);
         final Long id = 1L;
-        try (final Connection connection = dataSource.getConnection();
-             final PreparedStatement ps = connection.prepareStatement("UPDATE message SET count = ? WHERE id = ?")) {
-            consumer.accept(ps);
-            ps.setLong(2, id);
-            ps.executeUpdate();
-        }
+        session.doWork(connection -> {
+            try (final PreparedStatement ps = connection.prepareStatement("UPDATE message SET count = ? WHERE id = ?")) {
+                consumer.accept(ps);
+                ps.setLong(2, id);
+                ps.executeUpdate();
+            }
+        });
     }
 
     private static Stream<Arguments> provideArguments() {
