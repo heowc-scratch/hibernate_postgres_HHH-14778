@@ -63,8 +63,8 @@ class ApplicationTests {
         final Long id = 1L;
         final Query query =
                 entityManager.createNativeQuery("UPDATE message SET count = cast(cast(:count as text) as bigint) WHERE id = :id")
-                        .setParameter("count", new TypedParameterValue(LongType.INSTANCE, null))
-                        .setParameter("id", id);
+                             .setParameter("count", null)
+                             .setParameter("id", id);
         query.executeUpdate();
     }
 
