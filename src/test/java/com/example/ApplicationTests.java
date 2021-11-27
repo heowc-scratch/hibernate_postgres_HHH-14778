@@ -3,7 +3,6 @@ package com.example;
 import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jpa.TypedParameterValue;
 import org.hibernate.type.LongType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -28,25 +27,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Transactional
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
-//@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ApplicationTests {
 
     @Autowired
     private EntityManager entityManager;
     @Autowired
     private DataSource dataSource;
-
-    @BeforeEach
-    void beforeEach() {
-        final Message message = Message.builder()
-                                       .body("message")
-                                       .count(0L)
-                                       .build();
-
-        entityManager.persist(message);
-        entityManager.flush();
-        entityManager.clear();
-    }
 
     @Test
     void nativeQuery() {
@@ -66,12 +52,22 @@ class ApplicationTests {
     }
 
     @Test
-    void solvedNativeQuery() {
+    void solvedNativeQueryUsingTypeParameterValue() {
         final Long id = 1L;
         final Query query =
                 entityManager.createNativeQuery("UPDATE message SET count = :count WHERE id = :id")
                              .setParameter("count", new TypedParameterValue(LongType.INSTANCE, null))
                              .setParameter("id", id);
+        query.executeUpdate();
+    }
+
+    @Test
+    void solvedNativeQueryUsingTwiceCasting() {
+        final Long id = 1L;
+        final Query query =
+                entityManager.createNativeQuery("UPDATE message SET count = cast(cast(:count as text) as bigint) WHERE id = :id")
+                        .setParameter("count", new TypedParameterValue(LongType.INSTANCE, null))
+                        .setParameter("id", id);
         query.executeUpdate();
     }
 
