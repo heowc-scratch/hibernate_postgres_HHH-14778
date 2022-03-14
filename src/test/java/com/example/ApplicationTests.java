@@ -138,4 +138,11 @@ class ApplicationTests {
             })
         );
     }
+
+    // See https://github.com/spring-projects/spring-data-jpa/issues/2370
+    // See https://github.com/spring-projects/spring-data-jpa/pull/2461
+    @Test
+    void dataJpa(@Autowired MessageRepository repository) {
+        repository.update(null, 1L);
+    }
 }
